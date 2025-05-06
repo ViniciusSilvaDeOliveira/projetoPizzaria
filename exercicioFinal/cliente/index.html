@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Pizzaria</title>
+  <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      overflow-x: hidden;
+      background-color: #fff8f0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      background-color: #8B0000; /* Vermelho escuro */
+      color: white;
+      width: 150px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      transition: margin-left 0.3s ease;
+      z-index: 1000;
+    }
+
+    #sidebar.collapsed {
+      margin-left: -200px;
+    }
+
+    .sidebar-link {
+      display: block;
+      padding: 12px 20px;
+      color: white;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+
+    .sidebar-link:hover {
+      background-color: #C0392B; /* Vermelho tomate */
+    }
+
+    /* Botão de toggle */
+    .sidebar-toggle {
+      position: absolute;
+      top: 15px;
+      left: 160px;
+      z-index: 1100;
+      background: #8B0000;
+      border: none;
+      color: white;
+      font-size: 24px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      transition: left 0.3s ease;
+    }
+
+    #sidebar.collapsed + .sidebar-toggle {
+      left: 10px;
+    }
+
+    .sidebar-toggle:hover {
+      background-color: #C0392B;
+    }
+
+    /* Conteúdo */
+    #content {
+      margin-left: 200px;
+      transition: margin-left 0.3s ease;
+      padding: 40px 20px;
+    }
+
+    #sidebar.collapsed ~ #content {
+      margin-left: 0;
+    }
+  </style>
+</head>
+<body>
+
+    <div id="sidebar" class="sidebar">
+  <!-- Sidebar -->
+   <div style="padding: 10px !important;">
+       <img id="logo" alt="Logo" src="../imagens/pizzaLogo.png" style="width: 130px !important;">
+    </div>
+    <a class="sidebar-link" aria-current="page" href="index.html">🏠Home</a>
+    <a class="sidebar-link" href="clientes.html">👥Clientes</a>
+    <a class="sidebar-link" href="produtos.html">📋Produtos</a>
+    <a class="sidebar-link" href="pedidos.html">🛒Pedidos</a>
+</div>
+
+  <!-- Botão de toggle (fora do conteúdo!) -->
+  <button class="sidebar-toggle" id="toggleSidebar">&#9776;</button>
+
+  <!-- Conteúdo -->
+  <div id="content" class="">
+    <h1 class="mb-4">🍕 Bem-vindo ao Sistema da Pizzaria!</h1>
+    <p>Aqui você pode gerenciar seus pedidos, clientes, de forma fácil e rápida.</p>
+  </div>
+
+  <script>
+    const toggleBtn = document.getElementById("toggleSidebar");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+
+    toggleBtn.addEventListener("click", () => {
+      sidebar.classList.toggle("collapsed");
+
+      // Atualiza botão e conteúdo
+      if (sidebar.classList.contains("collapsed")) {
+        toggleBtn.style.left = "10px";
+        content.style.marginLeft = "60px";
+      } else {
+        toggleBtn.style.left = "160px";
+        content.style.marginLeft = "200px";
+      }
+    });
+  </script>
+</body>
+</html>

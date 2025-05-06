@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pagamento</title>
+  <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- <link href="../icons/fontAwesome.css" rel="stylesheet"> -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
+  <script type="text/javascript" src="../js/jquery.mask.min.js"></script>
+  <script type="text/javascript" src="../js/geral.js"></script>
+  <script>
+    $(document).ready(()=>{
+        ativaMascaras();
+    })
+
+    function formatDate(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+
+    async function trocaPainel(id){
+        $('.painel').hide();
+        $('#' + id).show();
+    }
+
+    async function listarPedido(codigo) {
+
+        let pedidoRetorno = {
+                id: 0,
+                idCliente: 0,
+                nomeCliente: "",
+                status: "",
+                formaDePagamento : "",
+                dataEntrega: null,
+                dataPedido: null,
+                ativo: false
+            }
+
+        if(codigo > 0){
+            let retorno = await fetch("http://localhost:3000/pedidos/listar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({nomeCliente:"", ativo:"1" })
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    if(objeto.pedidos.length > 0){
+                        await objeto.pedidos.map((pedido) => {
+                            if(pedido.id == codigo){
+                                pedidoRetorno = pedido;
+                            }
+
+                        })
+                        
+                    }
+                })
+            }
+
+            return pedidoRetorno;
+        }
+        else{
+            return pedidoRetorno
+        }
+    }
+
+    async function confirmar(){
+        if(validarFormulario('pnlCodigo'))
+        {
+            codigo = $(`#txtCodigoPedido`).val()
+            $(`#hdfCodigo`).val(codigo)
+
+            let pedido = await listarPedido(codigo);
+            if(pedido.id > 0){
+                await listarItensPedido(codigo);
+                
+                trocaPainel(`pnlItens`);
+                if(pedido.status == "Aguardando Pagamento"){
+                    $(`#spnPedidoPago`).hide();
+                }
+                else{
+                    $(`#spnPedidoPago`).show();
+                    $(`#btnAvancar`).hide()
+                }
+            }
+            else{
+                alert(`Pedido não encontrado!`)
+            }
+        }
+        else{
+            alert(`Preencha o código do pedido para confirmar!`)
+        }
+    }
+
+    async function avancar()
+    {
+        let codigo = $(`#hdfCodigo`).val();
+        let pedido =  await listarPedido(codigo);
+
+        if(pedido.formaDePagamento == `Crédito`){
+            $(`#cartaoModal`).show();
+        }
+        else{
+            pedido.status = "Em Preparação";
+            await atualizarPedido(pedido);
+            window.location.href = "conclusao.html";
+        }
+    }
+
+    async function atualizarPedido(pedido){
+            let retorno = await fetch("http://localhost:3000/pedidos/atualizar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ id:pedido.id,idCliente:pedido.idCliente, status:pedido.status, formaDePagamento:pedido.formaDePagamento, dataEntrega:(pedido.dataEntrega == `` || pedido.dataEntrega == null? '' : formatDate(new Date(dataEntrega))), ativo:pedido.ativo})
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                return true;
+            }
+            else
+            {
+                return false;
+            }               
+    }
+
+    async function listarItensPedido(idPedido)
+    {
+        let total = 0
+        let html = ``
+
+        let retorno = await fetch("http://localhost:3000/pedidos/produtos/listar/" + idPedido.toString(), {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+
+        `<div class="col-md-4">
+        <div class="product-card card">
+          <img src="https://via.placeholder.com/400x200.png?text=Produto" class="product-img" alt="Produto">
+          <div class="card-body">
+            <h5 class="card-title">Nome do Produto</h5>
+            <p class="card-text text-muted">Descrição breve do produto com algumas características principais.</p>
+            <p class="price">R$ 99,90</p>
+            <a href="#" class="btn btn-success w-100">Comprar</a>
+          </div>
+        </div>
+      </div>`
+        
+        console.log(retorno);
+        $(`#gdvProdutos tbody`).html('')   
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.pedidos_produtos.length > 0){
+                    await objeto.pedidos_produtos.map((pedido_produto) => {
+
+                        $(`#divItens`).append(`<div class="col-md-4 mt-3">
+                            <div class="product-card card">
+                              <div class="image-container">
+                                <img src="../imagens/${pedido_produto.imagemProduto}" class="product-img" alt="Produto">
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${pedido_produto.qtde.toString() + ` - ` + pedido_produto.nomeProduto.toString()}</h5>
+                                <p class="card-text text-muted">${pedido_produto.ingredientesProduto}</p>
+                                <p class="price">${(parseFloat(pedido_produto.precoProduto) * parseInt(pedido_produto.qtde)).toLocaleString('pt-br',{style: 'currency', currency: 'BRL'})}</p>
+                            </div>
+                            </div>
+                        </div>`)
+
+                        total += parseFloat(pedido_produto.precoProduto) * parseInt(pedido_produto.qtde);
+                    })
+                }
+                else{
+                    $(`#divItens`).html('<h5>Nenhum produto adicionado</h5>')   
+                }
+            })
+
+            $(`#lblTotal`).text(total.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'}));
+
+            if(total <= 0){
+                $(`#btnAvancar`).hide()
+            }
+            else{
+                $(`#btnAvancar`).show()
+            }
+        }
+
+    }
+
+    async function pagarCredito(){
+        if(validarFormulario('cartaoModal'))
+        {
+            let numeroCartao = $(`#txtNumeroCartao`).val()
+            const valor = await moedaParaFloat($(`#lblTotal`).text());
+            if(numeroCartao.toString().length >= 19)
+            {
+                realizarCompra(numeroCartao, valor)
+            }
+            else{
+                alert(`Número do cartão deve conter 19 digitos ou mais!`)
+            }
+        }
+        else
+        {
+            alert(`Preencha os campos obrigatórios!`)
+        }
+    }
+
+    async function realizarCompra(numeroCartao, valor) {
+            let codigo = $(`#hdfCodigo`).val();
+            let pedido =  await listarPedido(codigo);
+
+            const response = await fetch('http://localhost:3000/cartao/compras', {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({numeroCartao, valor}),
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(erro.response.data.erro);
+                } else {
+                    alert(erro.message);
+                }
+            });;
+
+            if(response.ok){
+                pedido.status = "Em Preparação";
+                await atualizarPedido(pedido);
+                window.location.href = "conclusao.html";
+            }
+            else{
+                await response.json().then(async (objeto) =>{
+                    alert(objeto.mensagem)
+                })
+            }
+    }
+
+
+    function moedaParaFloat(valorStr) {
+        return parseFloat(
+            valorStr
+            .replace(/\s/g, '')      // remove espaços
+            .replace('R$', '')       // remove o símbolo
+            .replace(/\./g, '')      // remove pontos
+            .replace(',', '.')       // troca vírgula por ponto
+        );
+    }
+
+  </script>
+  <style>
+    body {
+      overflow-x: hidden;
+      background-color: #fff8f0;
+      font-family: 'Segoe UI', sans-serif;
+      border: 10px solid #8B0000;
+      min-height: 100vh;
+    }
+
+    .fa {
+      transition: color 0.3s;
+    }
+
+    .fa:hover {
+      color: #C0392B; /* Vermelho tomate */
+    }
+
+
+    /* Conteúdo */
+    #content {
+      padding: 40px 20px;
+    }
+
+    .painel{
+        padding-left: 50px;
+        padding-right: 50px;
+    }
+
+    .naoPreenchido{
+        border:1px solid red !important;
+        border-radius:5px !important;
+    }
+
+    .logo
+    {
+        position: absolute;
+        left: 20px;
+    }
+    .image-container {
+      height: 180px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f8f9fa;
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+      overflow: hidden;
+    }
+
+    .product-img {
+      max-height: 100%;
+      max-width: 100%;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Conteúdo -->
+  <div id="content">
+
+    <div class="logo">
+        <img id="logo" alt="Logo" src="../imagens/pizzaLogo.png" style="width: 130px !important;">
+    </div>
+
+    <div id="pnlCodigo" class="painel" style="margin-top: 200px !important;">
+
+        <div class="container h-100 d-flex justify-content-center align-items-center">
+            <div class="card card-custom p-4" style="min-width: 350px;">
+              <h4 class="text-center text-danger mb-4">Código do Pedido</h4>
+              <div class="mb-3">
+                <label for="txtCodigoPedido" class="form-label">Digite o código:</label>
+                <input type="text" class="form-control numero obrigatorio" id="txtCodigoPedido" placeholder="Ex: 123456">
+              </div>
+              <div class="d-grid">
+                <button id="btnConfirmar" class="btn btn-danger" onclick="confirmar();">Confirmar</button>
+              </div>
+            </div>
+        </div>
+    
+    </div>
+
+    <div id="pnlItens" class="painel" style="display: none; margin-top: 150px !important;">
+        <div class="row">
+            <h3>Itens</h4>
+            <hr style="width: 100% !important;"/>
+        </div>
+
+        <span id="spnPedidoPago" class="badge bg-success w-100" style="display: none; font-size:large !important;">
+            Pedido já foi pago
+        </span>
+
+        <div>
+            <div class="row">
+                <div id="divItens" class="row">
+
+                </div>
+
+                <div class="col-md-12 mt-5">
+                    <h5>Total: <label id="lblTotal">R$ 0,00</label></h5>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button class="btn btn-danger w-25"  onclick="window.location = `pagamento.html`;" >Voltar</button>
+            <button class="btn btn-success w-25" style="margin-left: 10px !important;" id="btnAvancar" onclick="avancar()">Avançar</button>
+        </div>
+
+    </div>
+
+    <!-- Modal -->
+<div class="modal" id="cartaoModal" tabindex="-1" style="display: none !important;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="cartaoModalLabel">Cartão de Crédito</h5>
+          <button type="button" class="btn-close" onclick="$(`#cartaoModal`).hide()" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label for="txtNumeroCartao" class="form-label">Número do Cartão</label>
+              <input type="text" class="form-control numeroCartao obrigatorio" id="txtNumeroCartao" placeholder="9999-9999-9999-9999">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="$(`#cartaoModal`).hide()">Fechar</button>
+          <button type="button" class="btn btn-success" onclick="pagarCredito();">Pagar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+    <input type="hidden" id="hdfCodigo" value="0"/>
+  </div>
+  
+</body>
+</html>

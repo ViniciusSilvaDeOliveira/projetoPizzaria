@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Pizzaria</title>
+  <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- <link href="../icons/fontAwesome.css" rel="stylesheet"> -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
+  <script type="text/javascript" src="../js/jquery.mask.min.js"></script>
+  <script type="text/javascript" src="../js/geral.js"></script>
+  <script>
+    $(document).ready(()=>{
+        ativaMascaras();
+    })
+
+    function gravar(){
+        if(validarFormulario('pnlAlterar')){
+            if($('#hdfCodigo').val() == 0){
+                inserir();
+                trocaPainel('pnlListar');
+            }
+            else{
+                atualizar();
+                trocaPainel('pnlListar');
+            }
+            listar();
+        }
+        else{
+            alert('Preencha os campos obrigatórios!')
+        }
+
+    }
+
+    async function trocaPainel(id){
+        $('.painel').hide();
+        $('#' + id).show();
+
+        let codigo = 0;
+        codigo = parseInt($('#hdfCodigo').val()) 
+        if(codigo > 0){
+            let retorno = await fetch("http://localhost:3000/clientes/listar", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome:"", ativo:"" })
+             }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    if(objeto.clientes.length > 0){
+                        await objeto.clientes.map((cliente) => {
+                            if(cliente.id == codigo){
+                                $('#txtNomeCadastro').val(cliente.nome);
+                                $('#txtCepCadastro').val(cliente.cep);
+                                $('#txtLogradouroCadastro').val(cliente.logradouro);
+                                $('#txtNumeroCadastro').val(cliente.numero);
+                                $('#txtBairroCadastro').val(cliente.bairro);
+                                $('#txtComplementoCadastro').val(cliente.complemento);
+                                $('#txtCidadeCadastro').val(cliente.cidade);
+                                $('#txtUFCadastro').val(cliente.uf);
+                                $('#txtTelefoneCadastro').val(cliente.telefone);
+                                $('#ddlAtivoCadastro').val(cliente.ativo? '1' : '0');
+                            }
+
+                        })
+                        
+                    }
+                })
+            }
+        }
+    }
+
+    function limparCamposCadastro(){
+        $('#txtNomeCadastro').val('');
+        $('#txtCepCadastro').val('');
+        $('#txtLogradouroCadastro').val('');
+        $('#txtNumeroCadastro').val('');
+        $('#txtBairroCadastro').val('');
+        $('#txtComplementoCadastro').val('');
+        $('#txtCidadeCadastro').val('');
+        $('#txtUFCadastro').val('');
+        $('#txtTelefoneCadastro').val('');
+        $('#ddlAtivoCadastro').val('');
+        $('#hdfCodigo').val('0');
+    }
+
+    async function inserir(){
+            let nome = $('#txtNomeCadastro').val();
+            let cep = $('#txtCepCadastro').val();
+            let logradouro = $('#txtLogradouroCadastro').val();
+            let numero = $('#txtNumeroCadastro').val();
+            let bairro= $('#txtBairroCadastro').val();
+            let complemento = $('#txtComplementoCadastro').val();
+            let cidade = $('#txtCidadeCadastro').val();
+            let uf = $('#txtUFCadastro').val();
+            let telefone = $('#txtTelefoneCadastro').val();
+            let ativo = $('#ddlAtivoCadastro').val();
+            
+            let retorno = await fetch("http://localhost:3000/clientes/inserir", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({nome, cep, logradouro, numero, bairro, complemento, cidade, uf, telefone, ativo})
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    alert(objeto.message)
+                })
+            }
+            else
+            {
+                retorno.json().then((objeto) => {
+                    alert('Ocorreu algum erro ao tentar inserir!')
+                });
+            }               
+    }
+
+    async function atualizar(){
+            let id = $('#hdfCodigo').val();
+            let nome = $('#txtNomeCadastro').val();
+            let cep = $('#txtCepCadastro').val();
+            let logradouro = $('#txtLogradouroCadastro').val();
+            let numero = $('#txtNumeroCadastro').val();
+            let bairro= $('#txtBairroCadastro').val();
+            let complemento = $('#txtComplementoCadastro').val();
+            let cidade = $('#txtCidadeCadastro').val();
+            let uf = $('#txtUFCadastro').val();
+            let telefone = $('#txtTelefoneCadastro').val();
+            let ativo = $('#ddlAtivoCadastro').val();
+            
+            let retorno = await fetch("http://localhost:3000/clientes/atualizar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id,nome, cep, logradouro, numero, bairro, complemento, cidade, uf, telefone, ativo})
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    alert(objeto.message)
+                })
+            }
+            else
+            {
+                retorno.json().then((objeto) => {
+                    alert('Ocorreu algum erro ao tentar inserir!')
+                });
+            }               
+    }
+
+    async function desativar(id){
+            let retorno = await fetch("http://localhost:3000/clientes/desativar/" + id.toString(), {
+                method: "DELETE"
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    alert(objeto.message)
+                    listar();
+                })
+            }
+            else
+            {
+                retorno.json().then((objeto) => {
+                    alert('Ocorreu algum erro ao tentar desativar!')
+                });
+            }               
+    }
+
+    async function listar(){
+        let nome = $('#txtNome').val();
+        let ativo = $('#ddlAtivo').val();
+        let html = "";
+
+        html += `<table class='table table-bordered'>`
+        html += `<thead>`
+        html += `<tr>`
+        html += `<th>Nome</th>`
+        html += `<th>Telefone</th>`
+        html += `<th>Ativo</th>`
+        html += `<th>Opçōes</th>`
+        html += `</tr>`
+        html += `</thead>`
+        html += `<tbody>`
+            
+            
+            
+        let retorno = await fetch("http://localhost:3000/clientes/listar", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome, ativo })
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+        
+        console.log(retorno);
+
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.clientes.length > 0){
+                    await objeto.clientes.map((cliente) => {
+                        html += `<tr>`
+                        html += `<td>${cliente.nome}</td>`
+                        html += `<td>${cliente.telefone}</td>`
+                        html += `<td>${cliente.ativo == 1? "Sim" : "Não"}</td>`
+                        html += `<td>
+                            <button title="Desativar" id="btnDesativar" onclick="desativar(${cliente.id})" style="border:none;background:none;${cliente.ativo == 1? "display:block;" : "display:none;"}" onclick='trocaPainel("pnlAlterar")'><i class="fa fa-trash"></i></button>
+                            <button title="Editar" id="btnEditar" onclick='$("#hdfCodigo").val("${cliente.id}");trocaPainel("pnlAlterar")' style="border:none;background:none;"><i class="fa fa-pen-to-square"></i></button>
+                            </td>`
+                        html+= `</tr>`
+
+                    })
+                    
+                }
+                else{
+                    html += `<tr><td colspan='4' align='center'>Nenhum registro encontrado</td></tr>`
+                }
+            })
+        }
+        else
+        {
+            retorno.json().then((objeto) => {
+                alert('Ocorreu algum erro ao tentar listar: ' + objeto.erro)
+            });
+        }
+        html += `</tbody>`
+        html += `</table>`
+        
+        $(`#divListagem`).html(html);
+    }
+
+    function preencheCep(id) {
+        var cep = $(`#${id}`).val().replace('-', '');
+
+        if (cep.toString().length >= 8) {
+            fetch('https://viacep.com.br/ws/' + cep + '/json/').then(function (response) {
+
+                if (response.ok) {
+
+                    response.json().then(function (objeto) {
+                        $(`#txtLogradouroCadastro`).val(objeto.logradouro);
+                        $(`#txtComplementoCadastro`).val(objeto.complemento);
+                        $(`#txtBairroCadastro`).val(objeto.bairro);
+                        $(`#txtCidadeCadastro`).val(objeto.localidade);
+                        $(`#txtUFCadastro`).val(objeto.uf);
+                    });
+                }
+                else {
+                    console.log('erro - linha 552');
+                }
+            });
+        }
+        else {
+            $(`#${id}`).val('')
+        }
+    }
+  </script>
+  <style>
+    body {
+      overflow-x: hidden;
+      background-color: #fff8f0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      background-color: #8B0000; /* Vermelho escuro */
+      color: white;
+      width: 150px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      transition: margin-left 0.3s ease;
+      z-index: 1000;
+    }
+
+    #sidebar.collapsed {
+      margin-left: -200px;
+    }
+
+    .sidebar-link {
+      display: block;
+      padding: 12px 20px;
+      color: white;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+
+    .sidebar-link:hover {
+      background-color: #C0392B; /* Vermelho tomate */
+    }
+
+    .fa {
+      transition: color 0.3s;
+    }
+
+    .fa:hover {
+      color: #C0392B; /* Vermelho tomate */
+    }
+
+    /* Botão de toggle */
+    .sidebar-toggle {
+      position: absolute;
+      top: 15px;
+      left: 160px;
+      z-index: 1100;
+      background: #8B0000;
+      border: none;
+      color: white;
+      font-size: 24px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      transition: left 0.3s ease;
+    }
+
+    #sidebar.collapsed + .sidebar-toggle {
+      left: 10px;
+    }
+
+    .sidebar-toggle:hover {
+      background-color: #C0392B;
+    }
+
+    /* Conteúdo */
+    #content {
+      margin-left: 200px;
+      transition: margin-left 0.3s ease;
+      padding: 40px 20px;
+    }
+
+    #sidebar.collapsed ~ #content {
+      margin-left: 0;
+    }
+
+    .naoPreenchido{
+        border:1px solid red !important;
+        border-radius:5px !important;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar" class="sidebar">
+  <!-- Sidebar -->
+    <div style="padding: 10px !important;">
+        <img id="logo" alt="Logo" src="../imagens/pizzaLogo.png" style="width: 130px !important;">
+    </div>
+    <a class="sidebar-link" aria-current="page" href="index.html">🏠Home</a>
+    <a class="sidebar-link" href="clientes.html">👥Clientes</a>
+    <a class="sidebar-link" href="produtos.html">📋Produtos</a>
+    <a class="sidebar-link" href="pedidos.html">🛒Pedidos</a>
+</div>
+
+  <!-- Botão de toggle (fora do conteúdo!) -->
+  <button class="sidebar-toggle" id="toggleSidebar">&#9776;</button>
+
+  <!-- Conteúdo -->
+  <div id="content">
+
+    <div class="row">
+        <h3>Clientes</h4>
+        <hr style="width: 100% !important;"/>
+    </div>
+
+    <div id="pnlListar" class="painel">
+
+        <div class="row">
+            <div class="col-md-5">
+                <label for="txtNome">Nome</label>
+                <input id="txtNome" type="text" class="form-control"/>
+            </div>
+            <div class="col-md-3">
+                <label for="ddlAtivo">Ativo</label>
+                <select id="ddlAtivo" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="1">Sim</option>
+                    <option value="0">Não</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button id="btnListar" class="btn btn-primary mt-4" onclick="listar();">Listar</button>
+                <button id="btnAdicionar" class="btn btn-primary mt-4" onclick="$(`#hdfCodigo`).val(``);trocaPainel('pnlAlterar');limparCamposCadastro();">Adicionar</button>
+            </div>
+        </div>
+
+        <div class="table-responsive mt-3" id="divListagem">
+            
+        </div>
+    
+    </div>
+
+    <div id="pnlAlterar" class="painel" style="display: none;">
+        <div class="row">
+            <div class="col-md-6">
+                <label>Nome *</label>
+                <input type="text" id="txtNomeCadastro" class="form-control obrigatorio">
+            </div>
+            <div class="col-md-3">
+                <label for="ddlAtivoCadastro">Ativo *</label>
+                <select id="ddlAtivoCadastro" class="form-control obrigatorio">
+                    <option value="">Selecione</option>
+                    <option value="1">Sim</option>
+                    <option value="0">Não</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>CEP *</label>
+                <input type="text" id="txtCepCadastro" class="form-control cep obrigatorio" onchange="preencheCep(this.id);">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <label>Logradouro *</label>
+                <input type="text" id="txtLogradouroCadastro" class="form-control obrigatorio">
+            </div>
+            <div class="col-md-2">
+                <label>Numero</label>
+                <input type="text" id="txtNumeroCadastro" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label>Complemento</label>
+                <input type="text" id="txtComplementoCadastro" class="form-control">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <label>Bairro *</label>
+                <input type="text" id="txtBairroCadastro" class="form-control obrigatorio">
+            </div>
+            <div class="col-md-3">
+                <label>Cidade *</label>
+                <input type="text" id="txtCidadeCadastro" class="form-control obrigatorio">
+            </div>
+            <div class="col-md-3">
+                <label>Estado *</label>
+                <select id="txtUFCadastro" class="form-control obrigatorio">
+                    <option value="">Selecione</option>
+                    <option value="AC">Acre</option>
+                    <option value="AL">Alagoas</option>
+                    <option value="AP">Amapá</option>
+                    <option value="AM">Amazonas</option>
+                    <option value="BA">Bahia</option>
+                    <option value="CE">Ceará</option>
+                    <option value="DF">Distrito Federal</option>
+                    <option value="ES">Espírito Santo</option>
+                    <option value="GO">Goiás</option>
+                    <option value="MA">Maranhão</option>
+                    <option value="MT">Mato Grosso</option>
+                    <option value="MS">Mato Grosso do Sul</option>
+                    <option value="MG">Minas Gerais</option>
+                    <option value="PA">Pará</option>
+                    <option value="PB">Paraíba</option>
+                    <option value="PR">Paraná</option>
+                    <option value="PE">Pernambuco</option>
+                    <option value="PI">Piauí</option>
+                    <option value="RJ">Rio de Janeiro</option>
+                    <option value="RN">Rio Grande do Norte</option>
+                    <option value="RS">Rio Grande do Sul</option>
+                    <option value="RO">Rondônia</option>
+                    <option value="RR">Roraima</option>
+                    <option value="SC">Santa Catarina</option>
+                    <option value="SP">São Paulo</option>
+                    <option value="SE">Sergipe</option>
+                    <option value="TO">Tocantins</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Telefone *</label>
+                <input type="text" id="txtTelefoneCadastro" class="form-control telefone obrigatorio">
+            </div>
+        </div>
+
+        <div class="row center">
+            <div class="col-md-3">
+                <button id="btnCancelar" class="btn btn-danger mt-4" onclick="trocaPainel(`pnlListar`);">Cancelar</button>
+                <button id="btnGravar" class="btn btn-primary mt-4" onclick="gravar();">Gravar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="hdfCodigo" value="0"/>
+  </div>
+
+  <script>
+    const toggleBtn = document.getElementById("toggleSidebar");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+
+    toggleBtn.addEventListener("click", () => {
+      sidebar.classList.toggle("collapsed");
+
+      // Atualiza botão e conteúdo
+      if (sidebar.classList.contains("collapsed")) {
+        toggleBtn.style.left = "10px";
+        content.style.marginLeft = "60px";
+      } else {
+        toggleBtn.style.left = "160px";
+        content.style.marginLeft = "200px";
+      }
+    });
+  </script>
+
+  
+</body>
+</html>

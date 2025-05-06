@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Pizzaria</title>
+  <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- <link href="../icons/fontAwesome.css" rel="stylesheet"> -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
+  <script type="text/javascript" src="../js/jquery.mask.min.js"></script>
+  <script type="text/javascript" src="../js/geral.js"></script>
+  <script>
+    $(document).ready(()=>{
+        popularDdlProdutos();
+        popularDdlClientes();
+        ativaMascaras();
+    })
+
+    function formatDate(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+
+    function formatDateTimeLocal(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    async function popularDdlProdutos(){
+        let nome = "";
+        let ativo = "1";
+            
+        let html = `<option value=''>Selecione</option>`;
+            
+        let retorno = await fetch("http://localhost:3000/produtos/listar", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome, ativo })
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+        
+        console.log(retorno);
+
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.produtos.length > 0){
+                    await objeto.produtos.map((produto) => {
+                        html += `<option value='`+ produto.id +`' preco='`+ produto.preco + `'>` + produto.nome +`</option>`
+                    })
+                    
+                }
+            })
+        }
+        else
+        {
+            retorno.json().then((objeto) => {
+                alert('Ocorreu algum erro ao tentar listar os produtos: ' + objeto.erro)
+            });
+        }
+
+        
+        $(`#ddlProdutoCadastro`).html(html);
+    }
+
+    async function popularDdlClientes(){
+        let nome = "";
+        let ativo = "1";
+            
+        let html = `<option value=''>Selecione</option>`;
+            
+        let retorno = await fetch("http://localhost:3000/clientes/listar", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome, ativo })
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+        
+        console.log(retorno);
+
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.clientes.length > 0){
+                    await objeto.clientes.map((cliente) => {
+                        html += `<option value='`+ cliente.id +`'>` + cliente.nome +`</option>`
+                    })
+                    
+                }
+            })
+        }
+        else
+        {
+            retorno.json().then((objeto) => {
+                alert('Ocorreu algum erro ao tentar listar os clientes: ' + objeto.erro)
+            });
+        }
+
+        
+        $(`#ddlClienteCadastro`).html(html);
+    }
+
+    function adicionarProduto(){
+        const select = document.getElementById('ddlProdutoCadastro');
+  
+        const produto = $(`#ddlProdutoCadastro`).val();
+        const nomeProduto = select.options[select.selectedIndex].text;
+        const quantidade = $(`#txtQuantidadeCadastro`).val(); 
+        const preco = select.options[select.selectedIndex].getAttribute(`preco`)  
+        let total = 0
+
+        
+        if(produto !== "" && quantidade !== "")
+        {
+            if($(`#gdvProdutos tbody tr td[colspan='6']`).length > 0)
+            {
+                $(`#gdvProdutos tbody tr`).remove()
+            }
+
+            let tr = `<tr id='`+ produto +`' qtde='`+ quantidade +`' preco='`+ preco +`'>`;
+                tr+= `<td>`+ nomeProduto.toString() +`</td>`
+                tr+= `<td>`+ quantidade +`</td>`
+                tr+= `<td>`+ preco.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'}) +`</td>`
+                tr+= `<td>`+ `<button title="Desativar" id="btnRemoverProduto" onclick="removerProduto(this)" style="border:none;background:none;"><i class="fa fa-trash"></i></button>` +`</td>`
+                tr += `</tr>`
+             $(`#gdvProdutos tbody`).append(tr)
+
+            $(`#gdvProdutos tbody tr`).map((index, linha) =>{
+                total += parseFloat((linha).getAttribute(`preco`)) * parseInt((linha).getAttribute(`qtde`));
+            })
+
+            $(`#lblTotal`).text(total.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'}));
+
+            $(`#ddlProdutoCadastro`).val(''); 
+            $(`#txtQuantidadeCadastro`).val(''); 
+            
+        }
+        else{
+            alert(`Preencha os valores de item e quantidade`);
+        }
+
+    }
+
+    function removerProduto(elemento){
+        $(elemento).parent().parent().remove();
+         
+        let total = 0;
+
+        $(`#gdvProdutos tbody tr`).map((index, linha) =>{
+            total += parseFloat((linha).getAttribute(`preco`)) * parseInt((linha).getAttribute(`qtde`));
+        })
+
+        $(`#lblTotal`).text(total.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'}));
+
+        if($(`#gdvProdutos tbody tr`).length === 0){
+            $(`#gdvProdutos tbody`).html('<tr><td colspan="6">Nenhum produto adicionado</td></tr>')   
+        }
+    }
+
+    async function gravar(){
+        if(validarFormulario('pnlAlterar')){
+            if($('#hdfCodigo').val() == 0){
+                let id = await inserir();
+                if($(`#gdvProdutos tbody tr td[colspan='6']`).length == 0)
+                {
+                    await $(`#gdvProdutos tbody tr`).map(async (index, linha) =>{
+                        await inserirProdutoPedido(id, parseInt((linha).getAttribute(`id`)), parseInt((linha).getAttribute(`qtde`)));
+                    })
+                }
+                trocaPainel('pnlListar');
+            }
+            else{
+                let id = await parseInt($('#hdfCodigo').val())
+                await atualizar();
+                await desativarProdutosPedido(id);
+                if($(`#gdvProdutos tbody tr td[colspan='6']`).length == 0)
+                {
+                    $(`#gdvProdutos tbody tr`).map(async (index, linha) =>{
+                        await inserirProdutoPedido(id, parseInt((linha).getAttribute(`id`)), parseInt((linha).getAttribute(`qtde`)));
+                    })
+                }
+                trocaPainel('pnlListar');
+            }
+            listar();
+            alert('Dados gravados com sucesso!')
+        }
+        else{
+            alert('Preencha os campos obrigatórios!')
+        }
+
+    }
+
+    async function trocaPainel(id){
+        $('.painel').hide();
+        $('#' + id).show();
+
+        let codigo = 0;
+        codigo = parseInt($('#hdfCodigo').val()) 
+        if(codigo > 0){
+            let retorno = await fetch("http://localhost:3000/pedidos/listar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({nomeCliente:"", ativo:"" })
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    if(objeto.pedidos.length > 0){
+                        await objeto.pedidos.map((pedido) => {
+                            if(pedido.id == codigo){
+
+                                $('#ddlClienteCadastro').val(pedido.idCliente);
+                                $(`#ddlStatusCadastro`).val(pedido.status);
+                                $('#ddlFormaPagamentoCadastro').val(pedido.formaDePagamento);
+                                $('#txtDataEntregaCadastro').val(pedido.dataEntrega == null? '' : formatDateTimeLocal(new Date(pedido.dataEntrega.toString())));
+                                $('#ddlAtivoCadastro').val(pedido.ativo? '1' : '0');
+
+                                listarItensPedido(codigo);
+                            }
+
+                        })
+                        
+                    }
+                })
+            }
+        }
+    }
+
+    function limparCamposCadastro(){
+        $('#ddlClienteCadastro').val('');
+        $(`#ddlStatusCadastro`).val('');
+        $('#ddlFormaPagamentoCadastro').val('');
+        $('#txtDataEntregaCadastro').val('');
+        $('#ddlAtivoCadastro').val('');
+        $(`#lblTotal`).text(`R$ 0,00`)
+        $('#hdfCodigo').val('0');
+        $(`#gdvProdutos tbody`).html('<tr><td colspan="6">Nenhum produto adicionado</td></tr>')   
+    }
+
+    async function inserir(){
+            let idCliente = $('#ddlClienteCadastro').val();
+            let status = $(`#ddlStatusCadastro`).val();
+            let formaDePagamento = $('#ddlFormaPagamentoCadastro').val();
+            let dataEntrega = $('#txtDataEntregaCadastro').val().toString().replace(`T`, ` `);
+            let ativo = $('#ddlAtivoCadastro').val();
+
+            let retorno = await fetch("http://localhost:3000/pedidos/inserir", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({idCliente, status, formaDePagamento, dataEntrega, ativo})
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                const objeto = await retorno.json();
+                return objeto.id;
+            }
+            else
+            {
+                return 0;
+            }       
+                    
+    }
+
+    async function inserirProdutoPedido(idPedido, idProduto, qtde){
+            
+            let retorno = await fetch("http://localhost:3000/pedidos/produtos/inserir", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({idPedido, idProduto,qtde})
+            })
+    }
+
+    async function atualizar(){
+            let id = $('#hdfCodigo').val();
+            let idCliente = $('#ddlClienteCadastro').val();
+            let status = $(`#ddlStatusCadastro`).val();
+            let formaDePagamento = $('#ddlFormaPagamentoCadastro').val();
+            let dataEntrega = $('#txtDataEntregaCadastro').val().toString().replace(`T`, ` `);
+            let ativo = $('#ddlAtivoCadastro').val();
+            
+            let retorno = await fetch("http://localhost:3000/pedidos/atualizar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id,idCliente, status, formaDePagamento, dataEntrega, ativo})
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                return true;
+            }
+            else
+            {
+                return false;
+            }               
+    }
+
+    async function desativar(id){
+            let retorno = await fetch("http://localhost:3000/pedidos/desativar/" + id.toString(), {
+                method: "DELETE"
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    alert(objeto.message)
+                    listar();
+                })
+            }
+            else
+            {
+                retorno.json().then((objeto) => {
+                    alert('Ocorreu algum erro ao tentar desativar!')
+                });
+            }               
+    }
+
+    async function desativarProdutosPedido(idPedido){
+            let retorno = await fetch("http://localhost:3000/pedidos/produtos/desativar/" + idPedido.toString(), {
+                method: "DELETE"
+            })
+                        
+            if(retorno.ok){
+                return true
+            }
+            else
+            {
+                return false;
+            }               
+    }
+
+    async function listar(){
+        let nomeCliente = $('#txtCliente').val();
+        let ativo = $('#ddlAtivo').val();
+        let html = "";
+
+        html += `<table class='table table-bordered'>`
+        html += `<thead>`
+        html += `<tr>`
+        html += `<th>Cód.Pgto</th>`
+        html += `<th>Cliente</th>`
+        html += `<th>Status</th>`
+        html += `<th>Data</th>`
+        html += `<th>Ativo</th>`
+        html += `<th>Opçōes</th>`
+        html += `</tr>`
+        html += `</thead>`
+        html += `<tbody>`
+            
+            
+            
+        let retorno = await fetch("http://localhost:3000/pedidos/listar", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({nomeCliente, ativo })
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+        
+        console.log(retorno);
+
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.pedidos.length > 0){
+                    await objeto.pedidos.map((pedido) => {
+                        html += `<tr>`
+                        html += `<td>${pedido.id}</td>`
+                        html += `<td>${pedido.nomeCliente}</td>`
+                        html += `<td>${pedido.status}</td>`
+                        html += `<td>${formatDate(new Date(pedido.dataPedido.toString()))}</td>`
+                        // html += `<td>${parseFloat(produto.preco).toLocaleString('pt-br',{style: 'currency', currency: 'BRL'})}</td>`
+                        html += `<td>${pedido.ativo == 1? "Sim" : "Não"}</td>`
+                        html += `<td>
+                            <button title="Desativar" id="btnDesativar" onclick="desativar(${pedido.id})" style="border:none;background:none;${pedido.ativo == 1? "display:block;" : "display:none;"}" onclick='trocaPainel("pnlAlterar")'><i class="fa fa-trash"></i></button>
+                            <button title="Editar" id="btnEditar" onclick='$("#hdfCodigo").val("${pedido.id}");trocaPainel("pnlAlterar")' style="border:none;background:none;"><i class="fa fa-pen-to-square"></i></button>
+                            <button title="Visualizar Itens" id="btnItens" onclick='alertItensPedido(${pedido.id})' style="border:none;background:none;"><i class="fa fa-basket-shopping"></i></button>
+                            </td>`
+                        html+= `</tr>`
+
+                    })
+                    
+                }
+                else{
+                    html += `<tr><td colspan='6' align='center'>Nenhum registro encontrado</td></tr>`
+                }
+            })
+        }
+        else
+        {
+            retorno.json().then((objeto) => {
+                alert('Ocorreu algum erro ao tentar listar: ' + objeto.erro)
+            });
+        }
+        html += `</tbody>`
+        html += `</table>`
+        
+        $(`#divListagem`).html(html);
+    }
+
+    
+
+    async function listarItensPedido(idPedido)
+    {
+        let total = 0
+        let html = ``
+
+        let retorno = await fetch("http://localhost:3000/pedidos/produtos/listar/" + idPedido.toString(), {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+        
+        console.log(retorno);
+        $(`#gdvProdutos tbody`).html('')   
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.pedidos_produtos.length > 0){
+                    await objeto.pedidos_produtos.map((pedido_produto) => {
+                        let tr = `<tr id='`+ pedido_produto.idProduto +`' qtde='`+ pedido_produto.qtde +`' preco='`+ pedido_produto.precoProduto +`'>`;
+                        tr+= `<td>`+ pedido_produto.nomeProduto.toString() +`</td>`
+                        tr+= `<td>`+ pedido_produto.qtde +`</td>`
+                        tr+= `<td>`+ pedido_produto.precoProduto.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'}) +`</td>`
+                        tr+= `<td>`+ `<button title="Desativar" id="btnRemoverProduto" onclick="removerProduto(this)" style="border:none;background:none;"><i class="fa fa-trash"></i></button>` +`</td>`
+                        tr += `</tr>`
+                        $(`#gdvProdutos tbody`).append(tr)
+
+                        total += parseFloat(pedido_produto.precoProduto) * parseInt(pedido_produto.qtde);
+                    })
+                }
+                else{
+                    $(`#gdvProdutos tbody`).html('<tr><td colspan="6">Nenhum produto adicionado</td></tr>')   
+                }
+            })
+
+            $(`#lblTotal`).text(total.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'}));
+
+            $(`#ddlProdutoCadastro`).val(''); 
+            $(`#txtQuantidadeCadastro`).val(''); 
+        }
+
+    }
+    
+    
+    async function alertItensPedido(idPedido)
+    {
+        let total = 0
+        let html = ``
+
+        let retorno = await fetch("http://localhost:3000/pedidos/produtos/listar/" + idPedido.toString(), {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+        
+        console.log(retorno);
+
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.pedidos_produtos.length > 0){
+                    await objeto.pedidos_produtos.map((pedido_produto) => {
+                        html += `${pedido_produto.qtde}- ${pedido_produto.nomeProduto} (${parseFloat(pedido_produto.precoProduto).toLocaleString('pt-br',{style: 'currency', currency: 'BRL'})})\n`
+                        total += parseFloat(pedido_produto.precoProduto) * parseInt(pedido_produto.qtde);
+                    })
+                }
+                else{
+                    html += `Nenhum produto registrado\n`
+                }
+            })
+        }
+        else
+        {
+            retorno.json().then((objeto) => {
+                alert('Ocorreu algum erro ao tentar listar: ' + objeto.erro)
+            });
+        }
+
+        html += `\nTotal: ${total.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'})}`
+        alert(html);
+
+    }
+  </script>
+  <style>
+    body {
+      overflow-x: hidden;
+      background-color: #fff8f0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      background-color: #8B0000; /* Vermelho escuro */
+      color: white;
+      width: 150px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      transition: margin-left 0.3s ease;
+      z-index: 1000;
+    }
+
+    #sidebar.collapsed {
+      margin-left: -200px;
+    }
+
+    .sidebar-link {
+      display: block;
+      padding: 12px 20px;
+      color: white;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+
+    .sidebar-link:hover {
+      background-color: #C0392B; /* Vermelho tomate */
+    }
+
+    .fa {
+      transition: color 0.3s;
+    }
+
+    .fa:hover {
+      color: #C0392B; /* Vermelho tomate */
+    }
+
+    /* Botão de toggle */
+    .sidebar-toggle {
+      position: absolute;
+      top: 15px;
+      left: 160px;
+      z-index: 1100;
+      background: #8B0000;
+      border: none;
+      color: white;
+      font-size: 24px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      transition: left 0.3s ease;
+    }
+
+    #sidebar.collapsed + .sidebar-toggle {
+      left: 10px;
+    }
+
+    .sidebar-toggle:hover {
+      background-color: #C0392B;
+    }
+
+    /* Conteúdo */
+    #content {
+      margin-left: 200px;
+      transition: margin-left 0.3s ease;
+      padding: 40px 20px;
+    }
+
+    #sidebar.collapsed ~ #content {
+      margin-left: 0;
+    }
+
+    .naoPreenchido{
+        border:1px solid red !important;
+        border-radius:5px !important;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar" class="sidebar">
+  <!-- Sidebar -->
+    <div style="padding: 10px !important;">
+        <img id="logo" alt="Logo" src="../imagens/pizzaLogo.png" style="width: 130px !important;">
+    </div>
+    <a class="sidebar-link" aria-current="page" href="index.html">🏠Home</a>
+    <a class="sidebar-link" href="clientes.html">👥Clientes</a>
+    <a class="sidebar-link" href="produtos.html">📋Produtos</a>
+    <a class="sidebar-link" href="pedidos.html">🛒Pedidos</a>
+</div>
+
+  <!-- Botão de toggle (fora do conteúdo!) -->
+  <button class="sidebar-toggle" id="toggleSidebar">&#9776;</button>
+
+  <!-- Conteúdo -->
+  <div id="content">
+
+    <div class="row">
+        <h3>Pedidos</h4>
+        <hr style="width: 100% !important;"/>
+    </div>
+
+    <div id="pnlListar" class="painel">
+
+        <div class="row">
+            <div class="col-md-5">
+                <label for="txtCliente">Cliente</label>
+                <input id="txtCliente" type="text" class="form-control"/>
+            </div>
+            <div class="col-md-3">
+                <label for="ddlAtivo">Ativo</label>
+                <select id="ddlAtivo" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="1">Sim</option>
+                    <option value="0">Não</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button id="btnListar" class="btn btn-primary mt-4" onclick="listar();">Listar</button>
+                <button id="btnAdicionar" class="btn btn-primary mt-4" onclick="$(`#hdfCodigo`).val(``);limparCamposCadastro();trocaPainel('pnlAlterar');">Adicionar</button>
+            </div>
+        </div>
+
+        <div class="table-responsive mt-3" id="divListagem">
+            
+        </div>
+    
+    </div>
+
+    <div id="pnlAlterar" class="painel" style="display: none;">
+
+        <div class="tab-content">
+          <div>
+            <h5>Cadastro</h5>
+            
+            <div class="row">
+                <div class="col-md-5">
+                    <label for="ddlClienteCadastro">Cliente</label>
+                    <select id="ddlClienteCadastro" class="form-control obrigatorio">
+                      
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="ddlStatusCadastro">Status</label>
+                    <select id="ddlStatusCadastro" class="form-control obrigatorio">
+                        <option value="Aguardando Pagamento">Aguardando Pagamento</option>
+                        <option value="Em Preparação">Em Preparação</option>
+                        <option value="Entregue">Entregue</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="ddlFormaPagamentoCadastro">Forma de Pagamento</label>
+                    <select id="ddlFormaPagamentoCadastro" class="form-control obrigatorio">
+                        <option value="Débito">Débito</option>
+                        <option value="Crédito">Crédito</option>
+                        <option value="Vale Refeição">Vale Refeição</option>
+                        <option value="PIX">PIX</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="txtDataEntregaCadastro">Data Entrega</label>
+                    <input id="txtDataEntregaCadastro" type="datetime-local" class="form-control"/>
+                </div>
+                <div class="col-md-3">
+                    <label for="ddlAtivoCadastro">Ativo</label>
+                    <select id="ddlAtivoCadastro" class="form-control obrigatorio">
+                        <option value="">Selecione</option>
+                        <option value="1">Sim</option>
+                        <option value="0">Não</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mt-3">
+                    <h5>Produtos</h5>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="ddlProdutoCadastro">Item</label>
+                    <select id="ddlProdutoCadastro" class="form-control"></select>
+                </div>
+                <div class="col-md-4">
+                    <label for="txtQuantidadeCadastro">Quantidade</label>
+                    <input type="text" id="txtQuantidadeCadastro" class="form-control quantidade"/>
+                </div>
+
+                <div class="col-md-4">
+                    <button id="btnAdicionarProduto" class="btn btn-primary mt-4" onclick="adicionarProduto();">Adicionar</button>
+                </div>
+
+                <div class="col-md-12 table-responsive mt-3">
+                    <table id="gdvProdutos" class="table table-bordered" >
+                        <thead>
+                            <th>Nome</th>
+                            <th>Quantidade</th>
+                            <th>Preço</th>
+                            <th>Opçōes</th>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6">Nenhum produto adicionado</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="col-md-12">
+                    <h5>Total: <label id="lblTotal">R$ 0,00</label></h5>
+                </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="row center">
+            <div class="col-md-3">
+                <button id="btnCancelar" class="btn btn-danger mt-4" onclick="trocaPainel(`pnlListar`);">Cancelar</button>
+                <button id="btnGravar" class="btn btn-primary mt-4" onclick="gravar();">Gravar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="hdfCodigo" value="0"/>
+    <input type="hidden" id="hdfProdutoCadastro" value=""/>
+    <input type="hidden" id="hdfQtdeCadastro" value=""/>
+  </div>
+
+  <script>
+    const toggleBtn = document.getElementById("toggleSidebar");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+
+    toggleBtn.addEventListener("click", () => {
+      sidebar.classList.toggle("collapsed");
+
+      // Atualiza botão e conteúdo
+      if (sidebar.classList.contains("collapsed")) {
+        toggleBtn.style.left = "10px";
+        content.style.marginLeft = "60px";
+      } else {
+        toggleBtn.style.left = "160px";
+        content.style.marginLeft = "200px";
+      }
+    });
+  </script>
+
+  
+</body>
+</html>

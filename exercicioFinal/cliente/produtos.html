@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Pizzaria</title>
+  <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- <link href="../icons/fontAwesome.css" rel="stylesheet"> -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
+  <script type="text/javascript" src="../js/jquery.mask.min.js"></script>
+  <script type="text/javascript" src="../js/geral.js"></script>
+  <script>
+    $(document).ready(()=>{
+        ativaMascaras();
+    })
+
+    function gravar(){
+        if(validarFormulario('pnlAlterar')){
+            if($('#hdfCodigo').val() == 0){
+                inserir();
+                trocaPainel('pnlListar');
+            }
+            else{
+                atualizar();
+                trocaPainel('pnlListar');
+            }
+            listar();
+        }
+        else{
+            alert('Preencha os campos obrigatórios!')
+        }
+
+    }
+
+    async function trocaPainel(id){
+        $('.painel').hide();
+        $('#' + id).show();
+
+        let codigo = 0;
+        codigo = parseInt($('#hdfCodigo').val()) 
+        if(codigo > 0){
+            let retorno = await fetch("http://localhost:3000/produtos/listar", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome:"", ativo:"" })
+             }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    if(objeto.produtos.length > 0){
+                        await objeto.produtos.map((produto) => {
+                            if(produto.id == codigo){
+                                $('#txtNomeCadastro').val(produto.nome);
+                                $('#txtIngredientesCadastro').val(produto.ingredientes);
+                                $('#txtImagemCadastro').val(produto.imagem);
+                                $('#txtPrecoCadastro').val(produto.preco.toLocaleString('pt-br', {minimumFractionDigits: 2}));
+                                $('#ddlAtivoCadastro').val(produto.ativo? '1' : '0');
+                            }
+
+                        })
+                        
+                    }
+                })
+            }
+        }
+    }
+
+    function limparCamposCadastro(){
+        $('#txtNomeCadastro').val('');
+        $('#txtIngredientesCadastro').val('');
+        $('#txtImagemCadastro').val('');
+        $('#txtPrecoCadastro').val('');
+        $('#ddlAtivoCadastro').val('');
+        $('#hdfCodigo').val('0');
+    }
+
+    async function inserir(){
+            let nome = $('#txtNomeCadastro').val();
+            let ingredientes = $('#txtIngredientesCadastro').val();
+            let imagem = $('#txtImagemCadastro').val();
+            let preco = $('#txtPrecoCadastro').val().toString().replace('.','').replace(',','.');
+            let ativo = $('#ddlAtivoCadastro').val();
+            
+            let retorno = await fetch("http://localhost:3000/produtos/inserir", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({nome, ingredientes, imagem, preco, ativo})
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    alert(objeto.message)
+                })
+            }
+            else
+            {
+                retorno.json().then((objeto) => {
+                    alert('Ocorreu algum erro ao tentar inserir!')
+                });
+            }               
+    }
+
+    async function atualizar(){
+            let id = $('#hdfCodigo').val();
+            let nome = $('#txtNomeCadastro').val();
+            let ingredientes = $('#txtIngredientesCadastro').val();
+            let imagem = $('#txtImagemCadastro').val();
+            let preco = $('#txtPrecoCadastro').val().toString().replace('.','').replace(',','.');
+            let ativo = $('#ddlAtivoCadastro').val();
+            
+            let retorno = await fetch("http://localhost:3000/produtos/atualizar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id,nome, ingredientes, imagem, preco, ativo})
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    alert(objeto.message)
+                })
+            }
+            else
+            {
+                retorno.json().then((objeto) => {
+                    alert('Ocorreu algum erro ao tentar inserir!')
+                });
+            }               
+    }
+
+    async function desativar(id){
+            let retorno = await fetch("http://localhost:3000/produtos/desativar/" + id.toString(), {
+                method: "DELETE"
+            }).catch((erro) => {
+                if (error.response) {
+                    // Aqui você pega o JSON do erro
+                    alert(('Erro:', erro.response.data.erro));
+                } else {
+                    alert('Erro de rede:', erro.message);
+                }
+            });
+            
+            console.log(retorno);
+            
+            if(retorno.ok){
+                await retorno.json().then(async (objeto) => {
+                    alert(objeto.message)
+                    listar();
+                })
+            }
+            else
+            {
+                retorno.json().then((objeto) => {
+                    alert('Ocorreu algum erro ao tentar desativar!')
+                });
+            }               
+    }
+
+    async function listar(){
+        let nome = $('#txtNome').val();
+        let ativo = $('#ddlAtivo').val();
+        let html = "";
+
+        html += `<table class='table table-bordered'>`
+        html += `<thead>`
+        html += `<tr>`
+        html += `<th>Nome</th>`
+        html += `<th>Preço</th>`
+        html += `<th>Ativo</th>`
+        html += `<th>Opçōes</th>`
+        html += `</tr>`
+        html += `</thead>`
+        html += `<tbody>`
+            
+            
+            
+        let retorno = await fetch("http://localhost:3000/produtos/listar", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome, ativo })
+        }).catch((erro) => {
+            if (error.response) {
+                // Aqui você pega o JSON do erro
+                alert(('Erro:', erro.response.data.erro));
+            } else {
+                alert('Erro de rede:', erro.message);
+            }
+        });
+        
+        console.log(retorno);
+
+        if(retorno.ok){
+            await retorno.json().then(async (objeto) => {
+                if(objeto.produtos.length > 0){
+                    await objeto.produtos.map((produto) => {
+                        html += `<tr>`
+                        html += `<td>${produto.nome}</td>`
+                        html += `<td>${parseFloat(produto.preco).toLocaleString('pt-br',{style: 'currency', currency: 'BRL'})}</td>`
+                        html += `<td>${produto.ativo == 1? "Sim" : "Não"}</td>`
+                        html += `<td>
+                            <button title="Desativar" id="btnDesativar" onclick="desativar(${produto.id})" style="border:none;background:none;${produto.ativo == 1? "display:block;" : "display:none;"}" onclick='trocaPainel("pnlAlterar")'><i class="fa fa-trash"></i></button>
+                            <button title="Editar" id="btnEditar" onclick='$("#hdfCodigo").val("${produto.id}");trocaPainel("pnlAlterar")' style="border:none;background:none;"><i class="fa fa-pen-to-square"></i></button>
+                            </td>`
+                        html+= `</tr>`
+
+                    })
+                    
+                }
+                else{
+                    html += `<tr><td colspan='4' align='center'>Nenhum registro encontrado</td></tr>`
+                }
+            })
+        }
+        else
+        {
+            retorno.json().then((objeto) => {
+                alert('Ocorreu algum erro ao tentar listar: ' + objeto.erro)
+            });
+        }
+        html += `</tbody>`
+        html += `</table>`
+        
+        $(`#divListagem`).html(html);
+    }
+  </script>
+  <style>
+    body {
+      overflow-x: hidden;
+      background-color: #fff8f0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      background-color: #8B0000; /* Vermelho escuro */
+      color: white;
+      width: 150px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      transition: margin-left 0.3s ease;
+      z-index: 1000;
+    }
+
+    #sidebar.collapsed {
+      margin-left: -200px;
+    }
+
+    .sidebar-link {
+      display: block;
+      padding: 12px 20px;
+      color: white;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+
+    .sidebar-link:hover {
+      background-color: #C0392B; /* Vermelho tomate */
+    }
+
+    .fa {
+      transition: color 0.3s;
+    }
+
+    .fa:hover {
+      color: #C0392B; /* Vermelho tomate */
+    }
+
+    /* Botão de toggle */
+    .sidebar-toggle {
+      position: absolute;
+      top: 15px;
+      left: 160px;
+      z-index: 1100;
+      background: #8B0000;
+      border: none;
+      color: white;
+      font-size: 24px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      transition: left 0.3s ease;
+    }
+
+    #sidebar.collapsed + .sidebar-toggle {
+      left: 10px;
+    }
+
+    .sidebar-toggle:hover {
+      background-color: #C0392B;
+    }
+
+    /* Conteúdo */
+    #content {
+      margin-left: 200px;
+      transition: margin-left 0.3s ease;
+      padding: 40px 20px;
+    }
+
+    #sidebar.collapsed ~ #content {
+      margin-left: 0;
+    }
+
+    .naoPreenchido{
+        border:1px solid red !important;
+        border-radius:5px !important;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar" class="sidebar">
+  <!-- Sidebar -->
+    <div style="padding: 10px !important;">
+        <img id="logo" alt="Logo" src="../imagens/pizzaLogo.png" style="width: 130px !important;">
+    </div>
+    <a class="sidebar-link" aria-current="page" href="index.html">🏠Home</a>
+    <a class="sidebar-link" href="clientes.html">👥Clientes</a>
+    <a class="sidebar-link" href="produtos.html">📋Produtos</a>
+    <a class="sidebar-link" href="pedidos.html">🛒Pedidos</a>
+</div>
+
+  <!-- Botão de toggle (fora do conteúdo!) -->
+  <button class="sidebar-toggle" id="toggleSidebar">&#9776;</button>
+
+  <!-- Conteúdo -->
+  <div id="content">
+
+    <div class="row">
+        <h3>Produtos</h4>
+        <hr style="width: 100% !important;"/>
+    </div>
+
+    <div id="pnlListar" class="painel">
+
+        <div class="row">
+            <div class="col-md-5">
+                <label for="txtNome">Nome</label>
+                <input id="txtNome" type="text" class="form-control"/>
+            </div>
+            <div class="col-md-3">
+                <label for="ddlAtivo">Ativo</label>
+                <select id="ddlAtivo" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="1">Sim</option>
+                    <option value="0">Não</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button id="btnListar" class="btn btn-primary mt-4" onclick="listar();">Listar</button>
+                <button id="btnAdicionar" class="btn btn-primary mt-4" onclick="$(`#hdfCodigo`).val(``);trocaPainel('pnlAlterar');limparCamposCadastro();">Adicionar</button>
+            </div>
+        </div>
+
+        <div class="table-responsive mt-3" id="divListagem">
+            
+        </div>
+    
+    </div>
+
+    <div id="pnlAlterar" class="painel" style="display: none;">
+        <div class="row">
+            <div class="col-md-9">
+                <label>Nome *</label>
+                <input type="text" id="txtNomeCadastro" class="form-control obrigatorio">
+            </div>
+            <div class="col-md-3">
+                <label for="ddlAtivoCadastro">Ativo *</label>
+                <select id="ddlAtivoCadastro" class="form-control obrigatorio">
+                    <option value="">Selecione</option>
+                    <option value="1">Sim</option>
+                    <option value="0">Não</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <label>Ingredientes</label>
+                <textarea id="txtIngredientesCadastro" rows="5" class="form-control"></textarea>
+            </div>
+
+            <div class="col-md-4">
+              <label>Preço(R$) *</label>
+              <input type="text" id="txtPrecoCadastro" class="form-control dinheiro obrigatorio">
+            </div>
+            <div class="col-md-8">
+              <label>Imagem (Nome do Arquivo)</label>
+              <input type="text" id="txtImagemCadastro" class="form-control">
+            </div>
+        </div>
+
+        <div class="row center">
+            <div class="col-md-3">
+                <button id="btnCancelar" class="btn btn-danger mt-4" onclick="trocaPainel(`pnlListar`);">Cancelar</button>
+                <button id="btnGravar" class="btn btn-primary mt-4" onclick="gravar();">Gravar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="hdfCodigo" value="0"/>
+  </div>
+
+  <script>
+    const toggleBtn = document.getElementById("toggleSidebar");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+
+    toggleBtn.addEventListener("click", () => {
+      sidebar.classList.toggle("collapsed");
+
+      // Atualiza botão e conteúdo
+      if (sidebar.classList.contains("collapsed")) {
+        toggleBtn.style.left = "10px";
+        content.style.marginLeft = "60px";
+      } else {
+        toggleBtn.style.left = "160px";
+        content.style.marginLeft = "200px";
+      }
+    });
+  </script>
+
+  
+</body>
+</html>
